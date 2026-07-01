@@ -1,0 +1,98 @@
+# ⚔️ GHOST PROTOCOL — SETTINGS
+# ==============================
+
+# General
+version: "1.0.0"
+name: "Ghost Protocol"
+mode: "ungated"  # ungated | restricted
+
+# AI Model Configuration
+ai:
+  default_model: "dolphin-llama3:latest"
+  temperature_range: [0.7, 1.2]
+  max_tokens: 8192
+  timeout: 60
+  
+  providers:
+    openrouter:
+      enabled: true
+      base_url: "https://openrouter.ai/api/v1"
+      free_models:
+        - "cognitivecomputations/dolphin-mistral-24b-venice-edition:free"
+        - "deepseek/deepseek-v4-flash:free"
+        - "openai/gpt-oss-20b:free"
+        - "qwen/qwen3-coder:free"
+        - "google/gemma-4-26b-a4b-it:free"
+    
+    venice:
+      enabled: true
+      base_url: "https://api.venice.ai/api/v1"
+      free_models:
+        - "dolphin-3-mistral-large"
+        - "llama-3.1-405b"
+    
+    huggingface:
+      enabled: true
+      base_url: "https://api-inference.huggingface.co/models"
+      free_models:
+        - "cognitivecomputations/dolphin-2.9.2-llama3-8b"
+        - "NousResearch/Hermes-3-Llama-3.1-405B"
+    
+    ollama:
+      enabled: true
+      base_url: "http://ollama:11434"
+      models:
+        - "dolphin-llama3:latest"
+        - "wizardlm-uncensored:latest"
+        - "nous-hermes2-mixtral"
+
+# Jailbreak Prompts
+jailbreaks:
+  injection_rate: 0.8  # 80% of requests get jailbreak prefix
+  files:
+    - "config/jailbreaks.txt"
+
+# Proxy Chain
+proxy:
+  hops: 3
+  mode: "tor_vpn_socks5"  # tor_vpn_socks5 | random
+  dns_leak_protection: true
+  user_agent_rotation: true
+  request_jitter_ms: [1000, 5000]
+
+# Sandbox
+sandbox:
+  image: "python:3.12-alpine"
+  memory_limit: "512m"
+  cpu_limit: 0.5
+  network_enabled: false
+  timeout: 60
+  max_processes: 50
+
+# Task Queue
+queue:
+  max_workers: 50
+  task_timeout: 300
+  retry_attempts: 3
+  retry_backoff: "exponential"
+
+# Storage
+storage:
+  type: "volatile"  # volatile | persistent
+  encryption: "aes-256-gcm"
+  auto_wipe_minutes: 1440
+  memory_limit_mb: 256
+
+# C2 Configuration
+c2:
+  platform: "telegram"  # telegram | discord | github
+  heartbeat_interval: 60
+  command_timeout: 120
+  max_output_size: 4000  # Telegram message limit
+
+# OPSEC
+opsec:
+  max_concurrent_scans: 10
+  rate_limit_requests_per_second: 5
+  alert_on_detection: true
+  self_destruct_on_compromise: true

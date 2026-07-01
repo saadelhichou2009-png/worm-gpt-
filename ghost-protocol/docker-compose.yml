@@ -1,0 +1,103 @@
+version: '3.8'
+
+# ⚔️ GHOST PROTOCOL — DOCKER COMPOSE
+# Complete stack deployment in one command
+
+services:
+  # === CORE: AI Model Engine ===
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ghost-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=24h
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - ghost-net
+
+  # === CORE: Command & Control ===
+  c2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ghost-c2
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./config:/ghost/config:ro
+      - ./core:/ghost/core:ro
+      - ./adapters:/ghost/adapters:ro
+      - ./agents:/ghost/agents:ro
+      - results:/ghost/results
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - ghost-net
+    cap_add:
+      - NET_ADMIN
+      - SYS_PTRACE
+
+  # === PROXY: Multi-hop Anonymization ===
+  tor-proxy:
+    image: dperson/torproxy:latest
+    container_name: ghost-tor
+    ports:
+      - "9050:9050"   # SOCKS5
+      - "8118:8118"   # HTTP
+    restart: unless-stopped
+    networks:
+      - ghost-net
+
+  # === INFRA: Volatile Memory Store ===
+  redis:
+    image: redis:alpine
+    container_name: ghost-redis
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    tmpfs:
+      - /data:size=256M
+    restart: unless-stopped
+    networks:
+      - ghost-net
+
+  # === INFRA: Cloudflare Tunnel (Optional) ===
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: ghost-tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
+    profiles:
+      - tunnel
+    restart: unless-stopped
+    networks:
+      - ghost-net
+
+networks:
+  ghost-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+
+volumes:
+  ollama_data:
+    driver: local
+  results:
+    driver: local
